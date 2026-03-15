@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "name": "17-alpine"
+    },
+    {
+      "name": "17.6-alpine3.22"
+    },
+    {
+      "name": "16-alpine"
+    },
+    {
+      "name": "latest"
+    }
+  ]
+}
