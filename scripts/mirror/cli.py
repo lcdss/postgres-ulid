@@ -63,7 +63,7 @@ def build_matrix(
 
     digest_by_tag = {
         tag: resolve_manifest_digest(f"{source_namespace}/{source_repository}", tag)
-        for tag in selected_tags(policy.mode, upstream_names)
+        for tag in selected_tags(policy.mode, upstream_names, policy.minimum_major)
     }
 
     plan = build_publish_plan(

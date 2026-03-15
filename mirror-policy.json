@@ -1,3 +1,4 @@
 {
-  "mode": "alpine-only"
+  "mode": "major-alpine",
+  "minimum_major": 14
 }

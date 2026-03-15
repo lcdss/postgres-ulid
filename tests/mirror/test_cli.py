@@ -36,14 +36,19 @@ def test_main_writes_matrix_json_from_discovered_tags(
 ) -> None:
     policy_file = tmp_path / "mirror-policy.json"
     output_file = tmp_path / "matrix.json"
-    policy_file.write_text('{"mode": "alpine-only"}', encoding="utf-8")
+    policy_file.write_text(
+        '{"mode": "major-alpine", "minimum_major": 14}',
+        encoding="utf-8",
+    )
 
     def fake_fetch_tags(namespace: str, repository: str) -> dict:
         if (namespace, repository) == ("library", "postgres"):
             return {
                 "results": [
+                    {"name": "13-alpine"},
+                    {"name": "14-alpine"},
+                    {"name": "14.19-alpine3.21"},
                     {"name": "17-alpine"},
-                    {"name": "17.6-alpine3.22"},
                     {"name": "16-alpine"},
                     {"name": "latest"},
                 ]
@@ -53,8 +58,8 @@ def test_main_writes_matrix_json_from_discovered_tags(
 
     def fake_resolve_manifest_digest(image: str, tag: str) -> str:
         return {
+            "14-alpine": "sha256:aaa",
             "17-alpine": "sha256:aaa",
-            "17.6-alpine3.22": "sha256:aaa",
             "16-alpine": "sha256:bbb",
         }[tag]
 
@@ -75,10 +80,10 @@ def test_main_writes_matrix_json_from_discovered_tags(
     assert exit_code == 0
     assert json.loads(output_file.read_text(encoding="utf-8")) == {
         "include": [
-            {
-                "digest": "sha256:aaa",
-                "base_image": "docker.io/library/postgres@sha256:aaa",
-                "target_tags": ["17-alpine", "17.6-alpine3.22"],
-            }
-        ]
-    }
+                {
+                    "digest": "sha256:aaa",
+                    "base_image": "docker.io/library/postgres@sha256:aaa",
+                    "target_tags": ["14-alpine", "17-alpine"],
+                }
+            ]
+        }

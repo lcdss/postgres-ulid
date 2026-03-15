@@ -1,17 +1,17 @@
 # postgres-ulid
 
-Mirror official PostgreSQL Alpine images into `lcdss/postgres-ulid` with
+Publish curated PostgreSQL Alpine images into `lcdss/postgres-ulid` with
 `pgx-ulid` installed.
 
 ## What It Publishes
 
-This repository mirrors every upstream `postgres` tag containing `alpine` into
-the Docker Hub repository `lcdss/postgres-ulid`.
+This repository publishes exact major upstream `postgres` Alpine tags from
+`14-alpine` upward into the Docker Hub repository `lcdss/postgres-ulid`.
 
 Examples:
 
 - `postgres:17-alpine` -> `lcdss/postgres-ulid:17-alpine`
-- `postgres:17.6-alpine3.22` -> `lcdss/postgres-ulid:17.6-alpine3.22`
+- `postgres:14-alpine` -> `lcdss/postgres-ulid:14-alpine`
 
 Each mirrored image behaves like the official Postgres image with the
 `pgx_ulid` extension installed. The runtime smoke test verifies:
@@ -77,7 +77,8 @@ The current mirror policy file is [mirror-policy.json](mirror-policy.json):
 
 ```json
 {
-  "mode": "alpine-only"
+  "mode": "major-alpine",
+  "minimum_major": 14
 }
 ```
 
