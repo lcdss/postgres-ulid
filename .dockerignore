@@ -1,0 +1,5 @@
+.git
+.pytest_cache
+.worktrees
+docs
+tests
