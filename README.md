@@ -34,10 +34,10 @@ If the planner finds no missing tags, the publish job is skipped cleanly.
 
 ## Required GitHub Secrets
 
-Configure these repository secrets before enabling the daily sync workflow:
+Configure these GitHub Actions values before enabling the daily sync workflow:
 
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
+- Repository variable: `DOCKERHUB_USERNAME`
+- Repository secret: `DOCKERHUB_TOKEN`
 
 The token must have permission to push tags to `lcdss/postgres-ulid`.
 
