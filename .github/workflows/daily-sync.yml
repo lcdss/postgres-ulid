@@ -5,6 +5,9 @@ on:
     - cron: "17 4 * * *"
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -13,9 +16,9 @@ jobs:
       has_work: ${{ steps.plan.outputs.has_work }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -47,9 +50,9 @@ jobs:
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
