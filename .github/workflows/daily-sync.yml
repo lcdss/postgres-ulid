@@ -42,9 +42,6 @@ jobs:
     needs: plan
     if: needs.plan.outputs.has_work == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,48 +57,76 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - id: tags
-        name: Expand publish tags
+      - name: Materialize publish plan
         env:
-          TARGET_TAGS_JSON: ${{ toJson(matrix.target_tags) }}
+          PUBLISH_PLAN_JSON: ${{ needs.plan.outputs.matrix }}
         run: |
           python3 - <<'PY'
           import json
           import os
+          from pathlib import Path
 
-          tags = json.loads(os.environ["TARGET_TAGS_JSON"])
-          publish_tags = "\n".join(
-              f"lcdss/postgres-ulid:{tag}" for tag in tags
+          payload = json.loads(os.environ["PUBLISH_PLAN_JSON"])
+          Path("publish-plan.json").write_text(
+              json.dumps(payload),
+              encoding="utf-8",
           )
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write("publish_tags<<EOF\n")
-              output.write(publish_tags + "\n")
-              output.write("EOF\n")
           PY
 
-      - name: Build verification image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          build-args: |
-            BASE_IMAGE=${{ matrix.base_image }}
-          tags: postgres-ulid:verify
-          load: true
-          cache-from: type=gha,scope=${{ matrix.digest }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.digest }}
+      - name: Publish missing tags
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
 
-      - name: Verify image contents
-        run: ./scripts/verify-image.sh postgres-ulid:verify
+          plan = json.loads(Path("publish-plan.json").read_text(encoding="utf-8"))
 
-      - name: Push mirrored tags
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          build-args: |
-            BASE_IMAGE=${{ matrix.base_image }}
-          tags: ${{ steps.tags.outputs.publish_tags }}
-          push: true
-          cache-from: type=gha,scope=${{ matrix.digest }}
+          for item in plan["include"]:
+              digest = item["digest"]
+              base_image = item["base_image"]
+              tags = [f"lcdss/postgres-ulid:{tag}" for tag in item["target_tags"]]
+
+              verify_cmd = [
+                  "docker",
+                  "buildx",
+                  "build",
+                  ".",
+                  "--file",
+                  "./Dockerfile",
+                  "--build-arg",
+                  f"BASE_IMAGE={base_image}",
+                  "--tag",
+                  "postgres-ulid:verify",
+                  "--load",
+                  "--cache-from",
+                  f"type=gha,scope={digest}",
+                  "--cache-to",
+                  f"type=gha,mode=max,scope={digest}",
+              ]
+              subprocess.run(verify_cmd, check=True)
+              subprocess.run(
+                  ["./scripts/verify-image.sh", "postgres-ulid:verify"],
+                  check=True,
+              )
+
+              push_cmd = [
+                  "docker",
+                  "buildx",
+                  "build",
+                  ".",
+                  "--file",
+                  "./Dockerfile",
+                  "--build-arg",
+                  f"BASE_IMAGE={base_image}",
+                  "--push",
+                  "--cache-from",
+                  f"type=gha,scope={digest}",
+                  "--cache-to",
+                  f"type=gha,mode=max,scope={digest}",
+              ]
+              for tag in tags:
+                  push_cmd.extend(["--tag", tag])
+
+              subprocess.run(push_cmd, check=True)
+          PY
