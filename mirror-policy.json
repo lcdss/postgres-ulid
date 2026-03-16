@@ -1,4 +1,4 @@
 {
-  "mode": "major-alpine",
-  "minimum_major": 14
+  "minimum_major": 13,
+  "families": ["alpine", "trixie"]
 }

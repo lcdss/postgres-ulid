@@ -2,24 +2,29 @@ import re
 from typing import Any
 
 
-MAJOR_ALPINE_TAG = re.compile(r"^(?P<major>\d+)-alpine$")
+MAJOR_FAMILY_TAG = re.compile(r"^(?P<major>\d+)-(?P<family>[a-z0-9-]+)$")
 
 
 def selected_tags(
-    mode: str, tag_names: list[str], minimum_major: int | None = None
+    tag_names: list[str],
+    minimum_major: int,
+    families: tuple[str, ...],
 ) -> list[str]:
-    if mode == "all-tags":
-        return sorted(tag_names)
-    if mode == "major-alpine":
-        if minimum_major is None:
-            raise ValueError("major-alpine selection requires minimum_major")
-        return sorted(
-            tag
-            for tag in tag_names
-            if (match := MAJOR_ALPINE_TAG.fullmatch(tag))
-            and int(match.group("major")) >= minimum_major
-        )
-    raise ValueError(f"Unsupported mirror mode: {mode}")
+    family_names = set(families)
+    selected = []
+    for tag in tag_names:
+        if tag in family_names:
+            selected.append(tag)
+            continue
+        match = MAJOR_FAMILY_TAG.fullmatch(tag)
+        if not match:
+            continue
+        if match.group("family") not in family_names:
+            continue
+        if int(match.group("major")) < minimum_major:
+            continue
+        selected.append(tag)
+    return sorted(selected)
 
 
 def build_publish_plan(
@@ -33,7 +38,7 @@ def build_publish_plan(
     destination_names = {item["name"] for item in destination_tag_payload["results"]}
     wanted = [
         tag
-        for tag in selected_tags(policy.mode, upstream_names, policy.minimum_major)
+        for tag in selected_tags(upstream_names, policy.minimum_major, policy.families)
         if tag not in destination_names
         or destination_digest_by_tag[tag] != digest_by_tag[tag]
     ]

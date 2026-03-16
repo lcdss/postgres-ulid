@@ -37,7 +37,7 @@ def test_main_writes_matrix_json_from_discovered_tags(
     policy_file = tmp_path / "mirror-policy.json"
     output_file = tmp_path / "matrix.json"
     policy_file.write_text(
-        '{"mode": "major-alpine", "minimum_major": 14}',
+        '{"minimum_major": 13, "families": ["alpine", "trixie"]}',
         encoding="utf-8",
     )
 
@@ -45,78 +45,30 @@ def test_main_writes_matrix_json_from_discovered_tags(
         if (namespace, repository) == ("library", "postgres"):
             return {
                 "results": [
+                    {"name": "12-alpine"},
                     {"name": "13-alpine"},
+                    {"name": "13-trixie"},
                     {"name": "14-alpine"},
+                    {"name": "14-trixie"},
                     {"name": "14.19-alpine3.21"},
-                    {"name": "17-alpine"},
-                    {"name": "16-alpine"},
+                    {"name": "17.6-trixie"},
+                    {"name": "alpine"},
+                    {"name": "trixie"},
                     {"name": "latest"},
                 ]
             }
 
-        return {"results": [{"name": "16-alpine"}]}
+        return {"results": [{"name": "13-trixie"}]}
 
     def fake_resolve_manifest_digest(image: str, tag: str) -> str:
         return {
-            "14-alpine": "sha256:aaa",
-            "17-alpine": "sha256:aaa",
-            "16-alpine": "sha256:bbb",
-        }[tag]
-
-    monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
-    monkeypatch.setattr(
-        "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
-    )
-
-    exit_code = main(
-        [
-            "--policy",
-            str(policy_file),
-            "--output",
-            str(output_file),
-        ]
-    )
-
-    assert exit_code == 0
-    assert json.loads(output_file.read_text(encoding="utf-8")) == {
-        "include": [
-            {
-                "digest": "sha256:aaa",
-                "base_image": "docker.io/library/postgres@sha256:aaa",
-                "target_tags": ["14-alpine", "17-alpine"],
-            }
-        ]
-    }
-
-
-def test_main_republishes_existing_tag_when_target_digest_drifted(
-    monkeypatch, tmp_path: Path
-) -> None:
-    policy_file = tmp_path / "mirror-policy.json"
-    output_file = tmp_path / "matrix.json"
-    policy_file.write_text(
-        '{"mode": "major-alpine", "minimum_major": 14}',
-        encoding="utf-8",
-    )
-
-    def fake_fetch_tags(namespace: str, repository: str) -> dict:
-        if (namespace, repository) == ("library", "postgres"):
-            return {
-                "results": [
-                    {"name": "14-alpine"},
-                    {"name": "16-alpine"},
-                    {"name": "17-alpine"},
-                ]
-            }
-
-        return {"results": [{"name": "16-alpine"}]}
-
-    def fake_resolve_manifest_digest(image: str, tag: str) -> str:
-        return {
+            ("library/postgres", "13-alpine"): "sha256:aaa",
+            ("library/postgres", "13-trixie"): "sha256:bbb",
             ("library/postgres", "14-alpine"): "sha256:aaa",
-            ("library/postgres", "16-alpine"): "sha256:bbb",
-            ("library/postgres", "17-alpine"): "sha256:aaa",
-            ("lcdss/postgres-ulid", "16-alpine"): "sha256:stale",
+            ("library/postgres", "14-trixie"): "sha256:bbb",
+            ("library/postgres", "alpine"): "sha256:ccc",
+            ("library/postgres", "trixie"): "sha256:ddd",
+            ("lcdss/postgres-ulid", "13-trixie"): "sha256:bbb",
         }[(image, tag)]
 
     monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
@@ -139,12 +91,103 @@ def test_main_republishes_existing_tag_when_target_digest_drifted(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
-                "target_tags": ["14-alpine", "17-alpine"],
+                "target_tags": ["13-alpine", "14-alpine"],
+            },
+            {
+                "digest": "sha256:bbb",
+                "base_image": "docker.io/library/postgres@sha256:bbb",
+                "target_tags": ["14-trixie"],
+            },
+            {
+                "digest": "sha256:ccc",
+                "base_image": "docker.io/library/postgres@sha256:ccc",
+                "target_tags": ["alpine"],
+            },
+            {
+                "digest": "sha256:ddd",
+                "base_image": "docker.io/library/postgres@sha256:ddd",
+                "target_tags": ["trixie"],
+            }
+        ]
+    }
+
+
+def test_main_republishes_existing_tag_when_target_digest_drifted(
+    monkeypatch, tmp_path: Path
+) -> None:
+    policy_file = tmp_path / "mirror-policy.json"
+    output_file = tmp_path / "matrix.json"
+    policy_file.write_text(
+        '{"minimum_major": 13, "families": ["alpine", "trixie"]}',
+        encoding="utf-8",
+    )
+
+    def fake_fetch_tags(namespace: str, repository: str) -> dict:
+        if (namespace, repository) == ("library", "postgres"):
+            return {
+                "results": [
+                    {"name": "13-alpine"},
+                    {"name": "16-alpine"},
+                    {"name": "13-trixie"},
+                    {"name": "alpine"},
+                    {"name": "trixie"},
+                ]
+            }
+
+        return {"results": [{"name": "16-alpine"}, {"name": "alpine"}]}
+
+    def fake_resolve_manifest_digest(image: str, tag: str) -> str:
+        return {
+            ("library/postgres", "13-alpine"): "sha256:aaa",
+            ("library/postgres", "16-alpine"): "sha256:bbb",
+            ("library/postgres", "13-trixie"): "sha256:ccc",
+            ("library/postgres", "alpine"): "sha256:ddd",
+            ("library/postgres", "trixie"): "sha256:eee",
+            ("lcdss/postgres-ulid", "16-alpine"): "sha256:stale",
+            ("lcdss/postgres-ulid", "alpine"): "sha256:stale-alpine",
+        }[(image, tag)]
+
+    monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
+    )
+
+    exit_code = main(
+        [
+            "--policy",
+            str(policy_file),
+            "--output",
+            str(output_file),
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {
+        "include": [
+            {
+                "digest": "sha256:aaa",
+                "base_image": "docker.io/library/postgres@sha256:aaa",
+                "target_tags": ["13-alpine"],
             },
             {
                 "digest": "sha256:bbb",
                 "base_image": "docker.io/library/postgres@sha256:bbb",
                 "target_tags": ["16-alpine"],
+            },
+            {
+                "digest": "sha256:ccc",
+                "base_image": "docker.io/library/postgres@sha256:ccc",
+                "target_tags": ["13-trixie"],
+            },
+            {
+                "digest": "sha256:ddd",
+                "base_image": "docker.io/library/postgres@sha256:ddd",
+                "target_tags": ["alpine"],
+            },
+            {
+                "digest": "sha256:eee",
+                "base_image": "docker.io/library/postgres@sha256:eee",
+                "target_tags": ["trixie"],
             },
         ]
     }

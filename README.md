@@ -77,16 +77,11 @@ The current mirror policy file is [mirror-policy.json](mirror-policy.json):
 
 ```json
 {
-  "mode": "major-alpine",
-  "minimum_major": 14
+  "minimum_major": 13,
+  "families": ["alpine", "trixie"]
 }
 ```
 
-To expand the mirror in the future without changing code, switch the mode to
-`all-tags`:
-
-```json
-{
-  "mode": "all-tags"
-}
-```
+This mirrors exact major tags from `13` upward for those two families, plus the
+floating `alpine` and `trixie` tags. Point-release tags such as
+`17.6-alpine3.22` are not selected.

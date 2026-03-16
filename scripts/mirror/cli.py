@@ -60,7 +60,7 @@ def build_matrix(
     upstream = fetch_tags(source_namespace, source_repository)
     destination = fetch_tags(target_namespace, target_repository)
     upstream_names = [item["name"] for item in upstream["results"]]
-    selected = selected_tags(policy.mode, upstream_names, policy.minimum_major)
+    selected = selected_tags(upstream_names, policy.minimum_major, policy.families)
     destination_names = {item["name"] for item in destination["results"]}
 
     digest_by_tag = {
