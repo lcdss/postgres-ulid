@@ -60,10 +60,17 @@ def build_matrix(
     upstream = fetch_tags(source_namespace, source_repository)
     destination = fetch_tags(target_namespace, target_repository)
     upstream_names = [item["name"] for item in upstream["results"]]
+    selected = selected_tags(policy.mode, upstream_names, policy.minimum_major)
+    destination_names = {item["name"] for item in destination["results"]}
 
     digest_by_tag = {
         tag: resolve_manifest_digest(f"{source_namespace}/{source_repository}", tag)
-        for tag in selected_tags(policy.mode, upstream_names, policy.minimum_major)
+        for tag in selected
+    }
+    destination_digest_by_tag = {
+        tag: resolve_manifest_digest(f"{target_namespace}/{target_repository}", tag)
+        for tag in selected
+        if tag in destination_names
     }
 
     plan = build_publish_plan(
@@ -71,6 +78,7 @@ def build_matrix(
         upstream_tag_payload=upstream,
         destination_tag_payload=destination,
         digest_by_tag=digest_by_tag,
+        destination_digest_by_tag=destination_digest_by_tag,
     )
     matrix = []
     for item in plan:
