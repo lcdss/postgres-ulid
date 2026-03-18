@@ -49,6 +49,7 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
     env = os.environ.copy()
     env["PATH"] = f"{bin_dir}:{env['PATH']}"
     env["FAKE_COMMAND_LOG"] = str(log_file)
+    env["PG_MAJOR"] = "17"
 
     result = subprocess.run(
         ["/usr/bin/bash", "scripts/install-build-deps.sh"],
@@ -66,7 +67,8 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
         (
             "apt-get install -y --no-install-recommends "
             "bash build-essential ca-certificates clang curl git libclang-dev "
-            "libssl-dev llvm-dev pkg-config"
+            "libpq-dev libssl-dev llvm-dev pkg-config "
+            "postgresql-server-dev-17 zlib1g-dev"
         ),
     ]
     assert "curl -fsSL https://sh.rustup.rs" in commands
@@ -119,12 +121,16 @@ def test_install_build_deps_uses_rustup_for_alpine_images(tmp_path: Path) -> Non
     assert result.returncode == 0, result.stderr
     commands = log_file.read_text(encoding="utf-8").splitlines()
 
-    assert commands == [
+    assert commands[:2] == [
         (
             "apk add --no-cache --virtual .build-deps bash build-base clang curl git "
             "llvm-dev openssl-dev pkgconf"
         ),
         "apk add --no-cache clang19-libclang",
-        "curl -fsSL https://sh.rustup.rs",
-        "sh -s -- -y --profile minimal --default-toolchain stable --component rustfmt",
     ]
+    assert "curl -fsSL https://sh.rustup.rs" in commands
+    assert (
+        "sh -s -- -y --profile minimal --default-toolchain stable "
+        "--component rustfmt"
+    ) in commands
+    assert len(commands) == 4

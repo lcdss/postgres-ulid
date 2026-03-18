@@ -24,3 +24,9 @@ def test_load_policy_rejects_missing_families(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="families"):
         load_policy(policy_file)
+
+
+def test_repository_policy_skips_unsupported_postgres_13() -> None:
+    policy = load_policy(Path("mirror-policy.json"))
+
+    assert policy.minimum_major == 14

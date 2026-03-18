@@ -1,4 +1,4 @@
 {
-  "minimum_major": 13,
+  "minimum_major": 14,
   "families": ["alpine", "trixie"]
 }

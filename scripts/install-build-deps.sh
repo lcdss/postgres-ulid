@@ -33,9 +33,12 @@ if command -v apt-get >/dev/null 2>&1; then
     curl \
     git \
     libclang-dev \
+    libpq-dev \
     libssl-dev \
     llvm-dev \
-    pkg-config
+    pkg-config \
+    postgresql-server-dev-${PG_MAJOR} \
+    zlib1g-dev
   curl -fsSL https://sh.rustup.rs | sh -s -- \
     -y \
     --profile minimal \
