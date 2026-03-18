@@ -1,6 +1,6 @@
 import json
 
-from scripts.mirror.registry import resolve_config_label
+from scripts.mirror.registry import resolve_config_label, resolve_source_digest
 
 
 class FakeResponse:
@@ -94,3 +94,91 @@ def test_resolve_config_label_returns_none_when_label_is_missing(monkeypatch) ->
     )
 
     assert label is None
+
+
+def test_resolve_source_digest_reads_digest_from_attestation(monkeypatch) -> None:
+    def fake_fetch_registry_token(image: str) -> str:
+        assert image == "lcdss/postgres-ulid"
+        return "token"
+
+    def fake_urlopen(request):
+        if request.full_url.endswith("/manifests/17-alpine"):
+            return FakeResponse(
+                {
+                    "manifests": [
+                        {
+                            "digest": "sha256:image-manifest",
+                            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                            "platform": {
+                                "architecture": "amd64",
+                                "os": "linux",
+                            },
+                        },
+                        {
+                            "annotations": {
+                                "vnd.docker.reference.type": "attestation-manifest",
+                            },
+                            "digest": "sha256:attestation-manifest",
+                            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                            "platform": {
+                                "architecture": "unknown",
+                                "os": "unknown",
+                            },
+                        },
+                    ]
+                }
+            )
+        if request.full_url.endswith("/manifests/sha256:image-manifest"):
+            return FakeResponse(
+                {
+                    "config": {
+                        "digest": "sha256:image-config",
+                    }
+                }
+            )
+        if request.full_url.endswith("/blobs/sha256:image-config"):
+            return FakeResponse({"config": {"Labels": {}}})
+        if request.full_url.endswith("/manifests/sha256:attestation-manifest"):
+            return FakeResponse(
+                {
+                    "config": {
+                        "digest": "sha256:attestation-config",
+                    },
+                    "layers": [
+                        {
+                            "digest": "sha256:attestation-layer",
+                            "mediaType": "application/vnd.in-toto+json",
+                        }
+                    ],
+                }
+            )
+        if request.full_url.endswith("/blobs/sha256:attestation-layer"):
+            return FakeResponse(
+                {
+                    "predicate": {
+                        "buildDefinition": {
+                            "externalParameters": {
+                                "request": {
+                                    "args": {
+                                        "build-arg:BASE_IMAGE": (
+                                            "docker.io/library/postgres@sha256:bbb"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        if request.full_url.endswith("/blobs/sha256:attestation-config"):
+            return FakeResponse({"config": {}})
+        raise AssertionError(request.full_url)
+
+    monkeypatch.setattr(
+        "scripts.mirror.registry.fetch_registry_token", fake_fetch_registry_token
+    )
+    monkeypatch.setattr("scripts.mirror.registry.urlopen", fake_urlopen)
+
+    digest = resolve_source_digest("lcdss/postgres-ulid", "17-alpine")
+
+    assert digest == "sha256:bbb"

@@ -6,10 +6,7 @@ from typing import Any
 from scripts.mirror.config import load_policy
 from scripts.mirror.docker_hub import fetch_tags
 from scripts.mirror.planner import build_publish_plan, selected_tags
-from scripts.mirror.registry import resolve_config_label, resolve_manifest_digest
-
-
-SOURCE_DIGEST_LABEL = "io.github.lcdss.postgres-ulid.source-digest"
+from scripts.mirror.registry import resolve_manifest_digest, resolve_source_digest
 
 
 def matrix_payload(plan: list[dict[str, Any]]) -> str:
@@ -71,11 +68,7 @@ def build_matrix(
         for tag in selected
     }
     destination_source_digest_by_tag = {
-        tag: resolve_config_label(
-            f"{target_namespace}/{target_repository}",
-            tag,
-            SOURCE_DIGEST_LABEL,
-        )
+        tag: resolve_source_digest(f"{target_namespace}/{target_repository}", tag)
         for tag in selected
         if tag in destination_names
     }

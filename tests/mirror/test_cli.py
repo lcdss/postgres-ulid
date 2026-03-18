@@ -70,8 +70,7 @@ def test_main_writes_matrix_json_from_discovered_tags(
             ("library/postgres", "trixie"): "sha256:ddd",
         }[(image, tag)]
 
-    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
-        assert label == "io.github.lcdss.postgres-ulid.source-digest"
+    def fake_resolve_source_digest(image: str, tag: str) -> str | None:
         return {
             ("lcdss/postgres-ulid", "13-trixie"): "sha256:bbb",
         }.get((image, tag))
@@ -81,7 +80,7 @@ def test_main_writes_matrix_json_from_discovered_tags(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
     )
     monkeypatch.setattr(
-        "scripts.mirror.cli.resolve_config_label", fake_resolve_config_label
+        "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
     )
 
     exit_code = main(
@@ -153,8 +152,7 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
             ("library/postgres", "trixie"): "sha256:eee",
         }[(image, tag)]
 
-    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
-        assert label == "io.github.lcdss.postgres-ulid.source-digest"
+    def fake_resolve_source_digest(image: str, tag: str) -> str | None:
         return {
             ("lcdss/postgres-ulid", "16-alpine"): "sha256:stale",
             ("lcdss/postgres-ulid", "alpine"): "sha256:stale-alpine",
@@ -165,7 +163,7 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
     )
     monkeypatch.setattr(
-        "scripts.mirror.cli.resolve_config_label", fake_resolve_config_label
+        "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
     )
 
     exit_code = main(
@@ -238,8 +236,7 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
             ("library/postgres", "alpine"): "sha256:ccc",
         }[(image, tag)]
 
-    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
-        assert label == "io.github.lcdss.postgres-ulid.source-digest"
+    def fake_resolve_source_digest(image: str, tag: str) -> str | None:
         return {
             ("lcdss/postgres-ulid", "16-alpine"): "sha256:bbb",
             ("lcdss/postgres-ulid", "alpine"): "sha256:ccc",
@@ -250,7 +247,7 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
     )
     monkeypatch.setattr(
-        "scripts.mirror.cli.resolve_config_label", fake_resolve_config_label
+        "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
     )
 
     exit_code = main(
