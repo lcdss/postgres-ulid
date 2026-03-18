@@ -12,6 +12,7 @@ ENV PATH=/usr/local/cargo/bin:${PATH}
 
 COPY scripts/install-build-deps.sh /usr/local/bin/install-build-deps.sh
 COPY scripts/find-pg-config.sh /usr/local/bin/find-pg-config.sh
+COPY scripts/stage-extension-artifacts.sh /usr/local/bin/stage-extension-artifacts.sh
 
 RUN set -eux; \
     sh /usr/local/bin/install-build-deps.sh; \
@@ -22,9 +23,7 @@ RUN set -eux; \
     cd /tmp/pgx_ulid; \
     cargo pgrx init --pg"${PG_MAJOR}"="${pg_config_path}"; \
     cargo pgrx install --release --pg-config "${pg_config_path}"; \
-    install -d /out/lib /out/extension; \
-    cp /usr/local/lib/postgresql/*ulid*.so /out/lib/; \
-    cp /usr/local/share/postgresql/extension/*ulid* /out/extension/
+    sh /usr/local/bin/stage-extension-artifacts.sh "${pg_config_path}" /out
 
 FROM ${BASE_IMAGE}
 
@@ -34,5 +33,4 @@ ARG SOURCE_DIGEST
 LABEL org.opencontainers.image.base.name="${BASE_IMAGE}" \
       io.github.lcdss.postgres-ulid.source-digest="${SOURCE_DIGEST}"
 
-COPY --from=builder /out/lib/ /usr/local/lib/postgresql/
-COPY --from=builder /out/extension/ /usr/local/share/postgresql/extension/
+COPY --from=builder /out/ /
