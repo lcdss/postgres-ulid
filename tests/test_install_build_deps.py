@@ -29,6 +29,11 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
         "apt-get",
         'printf "apt-get %s\\n" "$*" >>"$FAKE_COMMAND_LOG"',
     )
+    write_fake_command(
+        bin_dir,
+        "rm",
+        'printf "rm %s\\n" "$*" >>"$FAKE_COMMAND_LOG"',
+    )
 
     env = os.environ.copy()
     env["PATH"] = f"{bin_dir}:{env['PATH']}"
@@ -50,4 +55,5 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
             "bash build-essential clang curl git libclang-dev "
             "libssl-dev llvm-dev pkg-config rustc cargo"
         ),
+        "rm -rf /var/lib/apt/lists/*",
     ]
