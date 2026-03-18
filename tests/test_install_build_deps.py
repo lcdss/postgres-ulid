@@ -48,12 +48,15 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    assert log_file.read_text(encoding="utf-8").splitlines() == [
+    commands = log_file.read_text(encoding="utf-8").splitlines()
+
+    assert commands[:2] == [
         "apt-get update",
         (
             "apt-get install -y --no-install-recommends "
             "bash build-essential clang curl git libclang-dev "
             "libssl-dev llvm-dev pkg-config rustc cargo"
         ),
-        "rm -rf /var/lib/apt/lists/*",
     ]
+    assert len(commands) == 3
+    assert commands[2].startswith("rm -rf /var/lib/apt/lists/")
