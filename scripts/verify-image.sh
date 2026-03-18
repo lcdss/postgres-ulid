@@ -37,7 +37,7 @@ for attempt in $(seq 1 30); do
   if docker exec \
     "$container" \
     psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
-    -c "CREATE EXTENSION pgx_ulid; SELECT gen_ulid();" >/dev/null 2>&1; then
+    -c "CREATE EXTENSION pgx_ulid; SELECT gen_ulid(); SELECT gen_monotonic_ulid();" >/dev/null 2>&1; then
     exit 0
   fi
 

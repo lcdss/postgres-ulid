@@ -34,3 +34,5 @@ LABEL org.opencontainers.image.base.name="${BASE_IMAGE}" \
       io.github.lcdss.postgres-ulid.source-digest="${SOURCE_DIGEST}"
 
 COPY --from=builder /out/ /
+
+CMD ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]

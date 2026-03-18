@@ -10,15 +10,13 @@ if command -v apk >/dev/null 2>&1; then
     git \
     llvm-dev \
     openssl-dev \
-    pkgconf
+    pkgconf \
+    rust \
+    rustfmt \
+    cargo
 
   clang_pkg="$(apk info | grep -E '^clang[0-9]+$' | head -n1)"
   apk add --no-cache "${clang_pkg}-libclang"
-  curl -fsSL https://sh.rustup.rs | sh -s -- \
-    -y \
-    --profile minimal \
-    --default-toolchain stable \
-    --component rustfmt
   exit 0
 fi
 

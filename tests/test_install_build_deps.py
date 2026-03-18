@@ -121,16 +121,10 @@ def test_install_build_deps_uses_rustup_for_alpine_images(tmp_path: Path) -> Non
     assert result.returncode == 0, result.stderr
     commands = log_file.read_text(encoding="utf-8").splitlines()
 
-    assert commands[:2] == [
+    assert commands == [
         (
             "apk add --no-cache --virtual .build-deps bash build-base clang curl git "
-            "llvm-dev openssl-dev pkgconf"
+            "llvm-dev openssl-dev pkgconf rust rustfmt cargo"
         ),
         "apk add --no-cache clang19-libclang",
     ]
-    assert "curl -fsSL https://sh.rustup.rs" in commands
-    assert (
-        "sh -s -- -y --profile minimal --default-toolchain stable "
-        "--component rustfmt"
-    ) in commands
-    assert len(commands) == 4

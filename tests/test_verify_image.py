@@ -48,6 +48,7 @@ case "$command" in
         exit 0
         ;;
       psql)
+        printf '%s\n' "$*" >"$state_dir/psql-args"
         count_file="$state_dir/psql-count"
         count=0
         if [ -f "$count_file" ]; then
@@ -92,3 +93,7 @@ def test_verify_image_retries_sql_until_postgres_is_stable(tmp_path: Path) -> No
 
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "psql-count").read_text(encoding="utf-8").strip() == "2"
+    assert (
+        "SELECT gen_monotonic_ulid();"
+        in (tmp_path / "psql-args").read_text(encoding="utf-8")
+    )
