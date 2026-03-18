@@ -1,4 +1,5 @@
 ARG BASE_IMAGE
+ARG SOURCE_DIGEST
 
 FROM ${BASE_IMAGE} AS builder
 
@@ -24,6 +25,12 @@ RUN set -eux; \
     cp /usr/local/share/postgresql/extension/*ulid* /out/extension/
 
 FROM ${BASE_IMAGE}
+
+ARG BASE_IMAGE
+ARG SOURCE_DIGEST
+
+LABEL org.opencontainers.image.base.name="${BASE_IMAGE}" \
+      io.github.lcdss.postgres-ulid.source-digest="${SOURCE_DIGEST}"
 
 COPY --from=builder /out/lib/ /usr/local/lib/postgresql/
 COPY --from=builder /out/extension/ /usr/local/share/postgresql/extension/

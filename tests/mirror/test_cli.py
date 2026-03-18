@@ -68,12 +68,20 @@ def test_main_writes_matrix_json_from_discovered_tags(
             ("library/postgres", "14-trixie"): "sha256:bbb",
             ("library/postgres", "alpine"): "sha256:ccc",
             ("library/postgres", "trixie"): "sha256:ddd",
-            ("lcdss/postgres-ulid", "13-trixie"): "sha256:bbb",
         }[(image, tag)]
+
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        assert label == "io.github.lcdss.postgres-ulid.source-digest"
+        return {
+            ("lcdss/postgres-ulid", "13-trixie"): "sha256:bbb",
+        }.get((image, tag))
 
     monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label", fake_resolve_config_label
     )
 
     exit_code = main(
@@ -112,7 +120,7 @@ def test_main_writes_matrix_json_from_discovered_tags(
     }
 
 
-def test_main_republishes_existing_tag_when_target_digest_drifted(
+def test_main_republishes_existing_tag_when_target_source_digest_drifted(
     monkeypatch, tmp_path: Path
 ) -> None:
     policy_file = tmp_path / "mirror-policy.json"
@@ -143,13 +151,21 @@ def test_main_republishes_existing_tag_when_target_digest_drifted(
             ("library/postgres", "13-trixie"): "sha256:ccc",
             ("library/postgres", "alpine"): "sha256:ddd",
             ("library/postgres", "trixie"): "sha256:eee",
+        }[(image, tag)]
+
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        assert label == "io.github.lcdss.postgres-ulid.source-digest"
+        return {
             ("lcdss/postgres-ulid", "16-alpine"): "sha256:stale",
             ("lcdss/postgres-ulid", "alpine"): "sha256:stale-alpine",
-        }[(image, tag)]
+        }.get((image, tag))
 
     monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label", fake_resolve_config_label
     )
 
     exit_code = main(
@@ -189,5 +205,70 @@ def test_main_republishes_existing_tag_when_target_digest_drifted(
                 "base_image": "docker.io/library/postgres@sha256:eee",
                 "target_tags": ["trixie"],
             },
+        ]
+    }
+
+
+def test_main_skips_existing_tag_when_target_source_digest_matches(
+    monkeypatch, tmp_path: Path
+) -> None:
+    policy_file = tmp_path / "mirror-policy.json"
+    output_file = tmp_path / "matrix.json"
+    policy_file.write_text(
+        '{"minimum_major": 13, "families": ["alpine"]}',
+        encoding="utf-8",
+    )
+
+    def fake_fetch_tags(namespace: str, repository: str) -> dict:
+        if (namespace, repository) == ("library", "postgres"):
+            return {
+                "results": [
+                    {"name": "13-alpine"},
+                    {"name": "16-alpine"},
+                    {"name": "alpine"},
+                ]
+            }
+
+        return {"results": [{"name": "16-alpine"}, {"name": "alpine"}]}
+
+    def fake_resolve_manifest_digest(image: str, tag: str) -> str:
+        return {
+            ("library/postgres", "13-alpine"): "sha256:aaa",
+            ("library/postgres", "16-alpine"): "sha256:bbb",
+            ("library/postgres", "alpine"): "sha256:ccc",
+        }[(image, tag)]
+
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        assert label == "io.github.lcdss.postgres-ulid.source-digest"
+        return {
+            ("lcdss/postgres-ulid", "16-alpine"): "sha256:bbb",
+            ("lcdss/postgres-ulid", "alpine"): "sha256:ccc",
+        }.get((image, tag))
+
+    monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label", fake_resolve_config_label
+    )
+
+    exit_code = main(
+        [
+            "--policy",
+            str(policy_file),
+            "--output",
+            str(output_file),
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {
+        "include": [
+            {
+                "digest": "sha256:aaa",
+                "base_image": "docker.io/library/postgres@sha256:aaa",
+                "target_tags": ["13-alpine"],
+            }
         ]
     }

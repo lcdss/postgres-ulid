@@ -32,7 +32,7 @@ def build_publish_plan(
     upstream_tag_payload: dict,
     destination_tag_payload: dict,
     digest_by_tag: dict[str, str],
-    destination_digest_by_tag: dict[str, str],
+    destination_source_digest_by_tag: dict[str, str],
 ) -> list[dict[str, Any]]:
     upstream_names = [item["name"] for item in upstream_tag_payload["results"]]
     destination_names = {item["name"] for item in destination_tag_payload["results"]}
@@ -40,7 +40,7 @@ def build_publish_plan(
         tag
         for tag in selected_tags(upstream_names, policy.minimum_major, policy.families)
         if tag not in destination_names
-        or destination_digest_by_tag[tag] != digest_by_tag[tag]
+        or destination_source_digest_by_tag.get(tag) != digest_by_tag[tag]
     ]
 
     grouped: dict[str, list[str]] = {}

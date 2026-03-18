@@ -90,6 +90,7 @@ jobs:
           file: ./Dockerfile
           build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
+            SOURCE_DIGEST=${{ matrix.digest }}
           tags: postgres-ulid:verify
           load: true
           cache-from: type=gha,scope=${{ matrix.digest }}
@@ -105,6 +106,7 @@ jobs:
           file: ./Dockerfile
           build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
+            SOURCE_DIGEST=${{ matrix.digest }}
           tags: ${{ steps.tags.outputs.publish_tags }}
           push: true
           cache-from: type=gha,scope=${{ matrix.digest }}
