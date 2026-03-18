@@ -9,21 +9,10 @@ ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
 ENV PATH=/usr/local/cargo/bin:${PATH}
 
+COPY scripts/install-build-deps.sh /usr/local/bin/install-build-deps.sh
+
 RUN set -eux; \
-    apk add --no-cache --virtual .build-deps \
-        bash \
-        build-base \
-        clang \
-        curl \
-        git \
-        llvm-dev \
-        openssl-dev \
-        pkgconf \
-        rust \
-        rustfmt \
-        cargo; \
-    clang_pkg="$(apk info | grep -E '^clang[0-9]+$' | head -n1)"; \
-    apk add --no-cache "${clang_pkg}-libclang"; \
+    sh /usr/local/bin/install-build-deps.sh; \
     export LIBCLANG_PATH="$(dirname "$(find /usr/lib -name 'libclang.so*' | head -n1)")"; \
     cargo install cargo-pgrx --locked; \
     git clone --depth 1 --branch "${PGX_ULID_REF}" "${PGX_ULID_REPO}" /tmp/pgx_ulid; \
