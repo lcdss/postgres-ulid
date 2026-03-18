@@ -54,7 +54,7 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
         "apt-get update",
         (
             "apt-get install -y --no-install-recommends "
-            "bash build-essential clang curl git libclang-dev "
+            "bash build-essential ca-certificates clang curl git libclang-dev "
             "libssl-dev llvm-dev pkg-config rustc cargo"
         ),
     ]

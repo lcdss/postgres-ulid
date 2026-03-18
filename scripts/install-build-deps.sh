@@ -26,6 +26,7 @@ if command -v apt-get >/dev/null 2>&1; then
   apt-get install -y --no-install-recommends \
     bash \
     build-essential \
+    ca-certificates \
     clang \
     curl \
     git \
