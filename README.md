@@ -21,7 +21,7 @@ This repository mirrors selected tags from the official `postgres` image into
 
 Current mirror policy:
 
-- Exact major tags from `13` and newer
+- Exact major tags from `14` and newer
 - The `alpine` and `trixie` image families
 - The floating `alpine` and `trixie` tags
 

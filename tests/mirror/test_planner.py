@@ -12,7 +12,6 @@ def load_fixture(name: str) -> dict:
 
 def test_selected_tags_filters_major_families_and_floating_aliases() -> None:
     tags = [
-        "12-alpine",
         "13-alpine",
         "13-trixie",
         "14-alpine",
@@ -26,13 +25,11 @@ def test_selected_tags_filters_major_families_and_floating_aliases() -> None:
 
     selected = selected_tags(
         tag_names=tags,
-        minimum_major=13,
+        minimum_major=14,
         families=("alpine", "trixie"),
     )
 
     assert selected == [
-        "13-alpine",
-        "13-trixie",
         "14-alpine",
         "14-trixie",
         "alpine",
@@ -43,10 +40,10 @@ def test_selected_tags_filters_major_families_and_floating_aliases() -> None:
 def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> None:
     upstream = {
         "results": [
-            {"name": "13-alpine"},
-            {"name": "13-trixie"},
             {"name": "14-alpine"},
             {"name": "14-trixie"},
+            {"name": "15-alpine"},
+            {"name": "15-trixie"},
             {"name": "14.19-alpine3.21"},
             {"name": "alpine"},
             {"name": "trixie"},
@@ -54,10 +51,10 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
     }
     destination = load_fixture("lcdss-postgres-ulid-tags.json")
     digest_by_tag = {
-        "13-alpine": "sha256:aaa",
-        "13-trixie": "sha256:ccc",
         "14-alpine": "sha256:aaa",
         "14-trixie": "sha256:ccc",
+        "15-alpine": "sha256:aaa",
+        "15-trixie": "sha256:ccc",
         "16-alpine": "sha256:bbb",
         "alpine": "sha256:ddd",
         "trixie": "sha256:eee",
@@ -65,7 +62,7 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
 
     plan = build_publish_plan(
         policy=MirrorPolicy(
-            minimum_major=13,
+            minimum_major=14,
             families=("alpine", "trixie"),
         ),
         upstream_tag_payload=upstream,
@@ -73,10 +70,10 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
         digest_by_tag=digest_by_tag,
         destination_source_digest_by_tag={"16-alpine": "sha256:bbb"},
         build_signature_by_tag={
-            "13-alpine": "sig-alpine",
-            "13-trixie": "sig-debian",
             "14-alpine": "sig-alpine",
             "14-trixie": "sig-debian",
+            "15-alpine": "sig-alpine",
+            "15-trixie": "sig-debian",
             "alpine": "sig-alpine",
             "trixie": "sig-debian",
         },
@@ -91,16 +88,16 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
             "base_image": "postgres@sha256:aaa",
             "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
-            "source_tags": ["13-alpine", "14-alpine"],
-            "target_tags": ["13-alpine", "14-alpine"],
+            "source_tags": ["14-alpine", "15-alpine"],
+            "target_tags": ["14-alpine", "15-alpine"],
         },
         {
             "digest": "sha256:ccc",
             "base_image": "postgres@sha256:ccc",
             "build_signature": "sig-debian",
             "dockerfile": "Dockerfile.debian",
-            "source_tags": ["13-trixie", "14-trixie"],
-            "target_tags": ["13-trixie", "14-trixie"],
+            "source_tags": ["14-trixie", "15-trixie"],
+            "target_tags": ["14-trixie", "15-trixie"],
         },
         {
             "digest": "sha256:ddd",
@@ -124,8 +121,8 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
 def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> None:
     upstream = {
         "results": [
-            {"name": "13-alpine"},
             {"name": "14-alpine"},
+            {"name": "15-alpine"},
             {"name": "16-alpine"},
             {"name": "alpine"},
             {"name": "14.19-alpine3.21"},
@@ -133,15 +130,15 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
     }
     destination = load_fixture("lcdss-postgres-ulid-tags.json")
     digest_by_tag = {
-        "13-alpine": "sha256:aaa",
         "14-alpine": "sha256:aaa",
+        "15-alpine": "sha256:aaa",
         "16-alpine": "sha256:bbb",
         "alpine": "sha256:ccc",
     }
 
     plan = build_publish_plan(
         policy=MirrorPolicy(
-            minimum_major=13,
+            minimum_major=14,
             families=("alpine",),
         ),
         upstream_tag_payload=upstream,
@@ -149,8 +146,8 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
         digest_by_tag=digest_by_tag,
         destination_source_digest_by_tag={"16-alpine": "sha256:stale"},
         build_signature_by_tag={
-            "13-alpine": "sig-alpine",
             "14-alpine": "sig-alpine",
+            "15-alpine": "sig-alpine",
             "16-alpine": "sig-alpine",
             "alpine": "sig-alpine",
         },
@@ -165,8 +162,8 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
             "base_image": "postgres@sha256:aaa",
             "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
-            "source_tags": ["13-alpine", "14-alpine"],
-            "target_tags": ["13-alpine", "14-alpine"],
+            "source_tags": ["14-alpine", "15-alpine"],
+            "target_tags": ["14-alpine", "15-alpine"],
         },
         {
             "digest": "sha256:bbb",
@@ -187,7 +184,7 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
     ]
 
 
-def test_build_publish_plan_skips_existing_tag_when_source_digest_matches() -> None:
+def test_build_publish_plan_skips_unsupported_tag_when_major_is_below_policy_floor() -> None:
     upstream = {
         "results": [
             {"name": "13-alpine"},
@@ -209,7 +206,7 @@ def test_build_publish_plan_skips_existing_tag_when_source_digest_matches() -> N
 
     plan = build_publish_plan(
         policy=MirrorPolicy(
-            minimum_major=13,
+            minimum_major=14,
             families=("alpine",),
         ),
         upstream_tag_payload=upstream,
@@ -230,16 +227,7 @@ def test_build_publish_plan_skips_existing_tag_when_source_digest_matches() -> N
         },
     )
 
-    assert plan == [
-        {
-            "digest": "sha256:aaa",
-            "base_image": "postgres@sha256:aaa",
-            "build_signature": "sig-alpine",
-            "dockerfile": "Dockerfile.alpine",
-            "source_tags": ["13-alpine"],
-            "target_tags": ["13-alpine"],
-        }
-    ]
+    assert plan == []
 
 
 def test_build_publish_plan_republishes_existing_tag_when_build_signature_changes() -> None:
@@ -259,7 +247,7 @@ def test_build_publish_plan_republishes_existing_tag_when_build_signature_change
 
     plan = build_publish_plan(
         policy=MirrorPolicy(
-            minimum_major=13,
+            minimum_major=14,
             families=("alpine",),
         ),
         upstream_tag_payload=upstream,

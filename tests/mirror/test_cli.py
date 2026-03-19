@@ -43,7 +43,7 @@ def test_main_writes_matrix_json_from_discovered_tags(
     policy_file = tmp_path / "mirror-policy.json"
     output_file = tmp_path / "matrix.json"
     policy_file.write_text(
-        '{"minimum_major": 13, "families": ["alpine", "trixie"]}',
+        '{"minimum_major": 14, "families": ["alpine", "trixie"]}',
         encoding="utf-8",
     )
 
@@ -51,11 +51,12 @@ def test_main_writes_matrix_json_from_discovered_tags(
         if (namespace, repository) == ("library", "postgres"):
             return {
                 "results": [
-                    {"name": "12-alpine"},
                     {"name": "13-alpine"},
                     {"name": "13-trixie"},
                     {"name": "14-alpine"},
                     {"name": "14-trixie"},
+                    {"name": "15-alpine"},
+                    {"name": "15-trixie"},
                     {"name": "14.19-alpine3.21"},
                     {"name": "17.6-trixie"},
                     {"name": "alpine"},
@@ -64,26 +65,26 @@ def test_main_writes_matrix_json_from_discovered_tags(
                 ]
             }
 
-        return {"results": [{"name": "13-trixie"}]}
+        return {"results": [{"name": "15-trixie"}]}
 
     def fake_resolve_manifest_digest(image: str, tag: str) -> str:
         return {
-            ("library/postgres", "13-alpine"): "sha256:aaa",
-            ("library/postgres", "13-trixie"): "sha256:bbb",
             ("library/postgres", "14-alpine"): "sha256:aaa",
             ("library/postgres", "14-trixie"): "sha256:bbb",
+            ("library/postgres", "15-alpine"): "sha256:aaa",
+            ("library/postgres", "15-trixie"): "sha256:bbb",
             ("library/postgres", "alpine"): "sha256:ccc",
             ("library/postgres", "trixie"): "sha256:ddd",
         }[(image, tag)]
 
     def fake_resolve_source_digest(image: str, tag: str) -> str | None:
         return {
-            ("lcdss/postgres-ulid", "13-trixie"): "sha256:bbb",
+            ("lcdss/postgres-ulid", "15-trixie"): "sha256:bbb",
         }.get((image, tag))
 
     def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
         return {
-            ("lcdss/postgres-ulid", "13-trixie", "io.github.lcdss.postgres-ulid.build-signature"): "sig-debian",
+            ("lcdss/postgres-ulid", "15-trixie", "io.github.lcdss.postgres-ulid.build-signature"): "sig-debian",
         }.get((image, tag, label))
 
     def fake_build_signature_for_dockerfile(dockerfile: str) -> str:
@@ -125,8 +126,8 @@ def test_main_writes_matrix_json_from_discovered_tags(
                 "base_image": "docker.io/library/postgres@sha256:aaa",
                 "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
-                "job_name": "Dockerfile.alpine -> 13-alpine, 14-alpine",
-                "target_tags": ["13-alpine", "14-alpine"],
+                "job_name": "Dockerfile.alpine -> 14-alpine, 15-alpine",
+                "target_tags": ["14-alpine", "15-alpine"],
             },
             {
                 "digest": "sha256:bbb",
@@ -162,7 +163,7 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
     policy_file = tmp_path / "mirror-policy.json"
     output_file = tmp_path / "matrix.json"
     policy_file.write_text(
-        '{"minimum_major": 13, "families": ["alpine", "trixie"]}',
+        '{"minimum_major": 14, "families": ["alpine", "trixie"]}',
         encoding="utf-8",
     )
 
@@ -170,9 +171,9 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
         if (namespace, repository) == ("library", "postgres"):
             return {
                 "results": [
-                    {"name": "13-alpine"},
+                    {"name": "14-alpine"},
                     {"name": "16-alpine"},
-                    {"name": "13-trixie"},
+                    {"name": "14-trixie"},
                     {"name": "alpine"},
                     {"name": "trixie"},
                 ]
@@ -182,9 +183,9 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
 
     def fake_resolve_manifest_digest(image: str, tag: str) -> str:
         return {
-            ("library/postgres", "13-alpine"): "sha256:aaa",
+            ("library/postgres", "14-alpine"): "sha256:aaa",
             ("library/postgres", "16-alpine"): "sha256:bbb",
-            ("library/postgres", "13-trixie"): "sha256:ccc",
+            ("library/postgres", "14-trixie"): "sha256:ccc",
             ("library/postgres", "alpine"): "sha256:ddd",
             ("library/postgres", "trixie"): "sha256:eee",
         }[(image, tag)]
@@ -240,8 +241,8 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
                 "base_image": "docker.io/library/postgres@sha256:aaa",
                 "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
-                "job_name": "Dockerfile.alpine -> 13-alpine",
-                "target_tags": ["13-alpine"],
+                "job_name": "Dockerfile.alpine -> 14-alpine",
+                "target_tags": ["14-alpine"],
             },
             {
                 "digest": "sha256:bbb",
@@ -256,8 +257,8 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
                 "base_image": "docker.io/library/postgres@sha256:ccc",
                 "build_signature": "sig-debian",
                 "dockerfile": "Dockerfile.debian",
-                "job_name": "Dockerfile.debian -> 13-trixie",
-                "target_tags": ["13-trixie"],
+                "job_name": "Dockerfile.debian -> 14-trixie",
+                "target_tags": ["14-trixie"],
             },
             {
                 "digest": "sha256:ddd",
@@ -285,7 +286,7 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
     policy_file = tmp_path / "mirror-policy.json"
     output_file = tmp_path / "matrix.json"
     policy_file.write_text(
-        '{"minimum_major": 13, "families": ["alpine"]}',
+        '{"minimum_major": 14, "families": ["alpine"]}',
         encoding="utf-8",
     )
 
@@ -293,7 +294,7 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
         if (namespace, repository) == ("library", "postgres"):
             return {
                 "results": [
-                    {"name": "13-alpine"},
+                    {"name": "14-alpine"},
                     {"name": "16-alpine"},
                     {"name": "alpine"},
                 ]
@@ -303,7 +304,7 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
 
     def fake_resolve_manifest_digest(image: str, tag: str) -> str:
         return {
-            ("library/postgres", "13-alpine"): "sha256:aaa",
+            ("library/postgres", "14-alpine"): "sha256:aaa",
             ("library/postgres", "16-alpine"): "sha256:bbb",
             ("library/postgres", "alpine"): "sha256:ccc",
         }[(image, tag)]
@@ -357,8 +358,8 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
                 "base_image": "docker.io/library/postgres@sha256:aaa",
                 "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
-                "job_name": "Dockerfile.alpine -> 13-alpine",
-                "target_tags": ["13-alpine"],
+                "job_name": "Dockerfile.alpine -> 14-alpine",
+                "target_tags": ["14-alpine"],
             }
         ]
     }
@@ -370,7 +371,7 @@ def test_main_republishes_existing_tag_when_target_build_signature_drifted(
     policy_file = tmp_path / "mirror-policy.json"
     output_file = tmp_path / "matrix.json"
     policy_file.write_text(
-        '{"minimum_major": 13, "families": ["alpine"]}',
+        '{"minimum_major": 14, "families": ["alpine"]}',
         encoding="utf-8",
     )
 
