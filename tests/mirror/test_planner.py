@@ -72,12 +72,24 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
         destination_tag_payload=destination,
         digest_by_tag=digest_by_tag,
         destination_source_digest_by_tag={"16-alpine": "sha256:bbb"},
+        build_signature_by_tag={
+            "13-alpine": "sig-alpine",
+            "13-trixie": "sig-debian",
+            "14-alpine": "sig-alpine",
+            "14-trixie": "sig-debian",
+            "alpine": "sig-alpine",
+            "trixie": "sig-debian",
+        },
+        destination_build_signature_by_tag={
+            "16-alpine": "sig-alpine",
+        },
     )
 
     assert plan == [
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
             "source_tags": ["13-alpine", "14-alpine"],
             "target_tags": ["13-alpine", "14-alpine"],
@@ -85,6 +97,7 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
         {
             "digest": "sha256:ccc",
             "base_image": "postgres@sha256:ccc",
+            "build_signature": "sig-debian",
             "dockerfile": "Dockerfile.debian",
             "source_tags": ["13-trixie", "14-trixie"],
             "target_tags": ["13-trixie", "14-trixie"],
@@ -92,6 +105,7 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
         {
             "digest": "sha256:ddd",
             "base_image": "postgres@sha256:ddd",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
             "source_tags": ["alpine"],
             "target_tags": ["alpine"],
@@ -99,6 +113,7 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
         {
             "digest": "sha256:eee",
             "base_image": "postgres@sha256:eee",
+            "build_signature": "sig-debian",
             "dockerfile": "Dockerfile.debian",
             "source_tags": ["trixie"],
             "target_tags": ["trixie"],
@@ -133,12 +148,22 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
         destination_tag_payload=destination,
         digest_by_tag=digest_by_tag,
         destination_source_digest_by_tag={"16-alpine": "sha256:stale"},
+        build_signature_by_tag={
+            "13-alpine": "sig-alpine",
+            "14-alpine": "sig-alpine",
+            "16-alpine": "sig-alpine",
+            "alpine": "sig-alpine",
+        },
+        destination_build_signature_by_tag={
+            "16-alpine": "sig-alpine",
+        },
     )
 
     assert plan == [
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
             "source_tags": ["13-alpine", "14-alpine"],
             "target_tags": ["13-alpine", "14-alpine"],
@@ -146,6 +171,7 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
         {
             "digest": "sha256:bbb",
             "base_image": "postgres@sha256:bbb",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
             "source_tags": ["16-alpine"],
             "target_tags": ["16-alpine"],
@@ -153,6 +179,7 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
         {
             "digest": "sha256:ccc",
             "base_image": "postgres@sha256:ccc",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
             "source_tags": ["alpine"],
             "target_tags": ["alpine"],
@@ -192,14 +219,70 @@ def test_build_publish_plan_skips_existing_tag_when_source_digest_matches() -> N
             "16-alpine": "sha256:bbb",
             "alpine": "sha256:ccc",
         },
+        build_signature_by_tag={
+            "13-alpine": "sig-alpine",
+            "16-alpine": "sig-alpine",
+            "alpine": "sig-alpine",
+        },
+        destination_build_signature_by_tag={
+            "16-alpine": "sig-alpine",
+            "alpine": "sig-alpine",
+        },
     )
 
     assert plan == [
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
             "source_tags": ["13-alpine"],
             "target_tags": ["13-alpine"],
+        }
+    ]
+
+
+def test_build_publish_plan_republishes_existing_tag_when_build_signature_changes() -> None:
+    upstream = {
+        "results": [
+            {"name": "16-alpine"},
+        ]
+    }
+    destination = {
+        "results": [
+            {"name": "16-alpine"},
+        ]
+    }
+    digest_by_tag = {
+        "16-alpine": "sha256:bbb",
+    }
+
+    plan = build_publish_plan(
+        policy=MirrorPolicy(
+            minimum_major=13,
+            families=("alpine",),
+        ),
+        upstream_tag_payload=upstream,
+        destination_tag_payload=destination,
+        digest_by_tag=digest_by_tag,
+        destination_source_digest_by_tag={
+            "16-alpine": "sha256:bbb",
+        },
+        build_signature_by_tag={
+            "16-alpine": "sig-current",
+        },
+        destination_build_signature_by_tag={
+            "16-alpine": "sig-stale",
+        },
+    )
+
+    assert plan == [
+        {
+            "digest": "sha256:bbb",
+            "base_image": "postgres@sha256:bbb",
+            "build_signature": "sig-current",
+            "dockerfile": "Dockerfile.alpine",
+            "source_tags": ["16-alpine"],
+            "target_tags": ["16-alpine"],
         }
     ]

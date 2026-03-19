@@ -3,10 +3,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts.mirror.build_signature import build_signature_for_dockerfile
 from scripts.mirror.config import load_policy
 from scripts.mirror.docker_hub import fetch_tags
-from scripts.mirror.planner import build_publish_plan, selected_tags
-from scripts.mirror.registry import resolve_manifest_digest, resolve_source_digest
+from scripts.mirror.planner import build_publish_plan, dockerfile_for_tag, selected_tags
+from scripts.mirror.registry import (
+    BUILD_SIGNATURE_LABEL,
+    resolve_config_label,
+    resolve_manifest_digest,
+    resolve_source_digest,
+)
 
 
 def matrix_payload(plan: list[dict[str, Any]]) -> str:
@@ -67,8 +73,24 @@ def build_matrix(
         tag: resolve_manifest_digest(f"{source_namespace}/{source_repository}", tag)
         for tag in selected
     }
+    build_signature_by_dockerfile = {
+        dockerfile: build_signature_for_dockerfile(dockerfile)
+        for dockerfile in {dockerfile_for_tag(tag) for tag in selected}
+    }
+    build_signature_by_tag = {
+        tag: build_signature_by_dockerfile[dockerfile_for_tag(tag)] for tag in selected
+    }
     destination_source_digest_by_tag = {
         tag: resolve_source_digest(f"{target_namespace}/{target_repository}", tag)
+        for tag in selected
+        if tag in destination_names
+    }
+    destination_build_signature_by_tag = {
+        tag: resolve_config_label(
+            f"{target_namespace}/{target_repository}",
+            tag,
+            BUILD_SIGNATURE_LABEL,
+        )
         for tag in selected
         if tag in destination_names
     }
@@ -79,6 +101,8 @@ def build_matrix(
         destination_tag_payload=destination,
         digest_by_tag=digest_by_tag,
         destination_source_digest_by_tag=destination_source_digest_by_tag,
+        build_signature_by_tag=build_signature_by_tag,
+        destination_build_signature_by_tag=destination_build_signature_by_tag,
     )
     matrix = []
     for item in plan:
@@ -88,7 +112,11 @@ def build_matrix(
                 "base_image": (
                     f"docker.io/{source_namespace}/{source_repository}@{item['digest']}"
                 ),
+                "build_signature": item["build_signature"],
                 "dockerfile": item["dockerfile"],
+                "job_name": (
+                    f"{item['dockerfile']} -> {', '.join(item['target_tags'])}"
+                ),
                 "target_tags": item["target_tags"],
             }
         )

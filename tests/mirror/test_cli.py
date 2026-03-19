@@ -9,7 +9,9 @@ def test_matrix_payload_wraps_publish_plan_for_github_actions() -> None:
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "build_signature": "sig-alpine",
             "dockerfile": "Dockerfile.alpine",
+            "job_name": "Dockerfile.alpine -> 17-alpine, 17.6-alpine3.22",
             "target_tags": ["17-alpine", "17.6-alpine3.22"],
         }
     ]
@@ -21,7 +23,9 @@ def test_matrix_payload_wraps_publish_plan_for_github_actions() -> None:
             {
                 "digest": "sha256:aaa",
                 "base_image": "postgres@sha256:aaa",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> 17-alpine, 17.6-alpine3.22",
                 "target_tags": ["17-alpine", "17.6-alpine3.22"],
             }
         ]
@@ -77,12 +81,31 @@ def test_main_writes_matrix_json_from_discovered_tags(
             ("lcdss/postgres-ulid", "13-trixie"): "sha256:bbb",
         }.get((image, tag))
 
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        return {
+            ("lcdss/postgres-ulid", "13-trixie", "io.github.lcdss.postgres-ulid.build-signature"): "sig-debian",
+        }.get((image, tag, label))
+
+    def fake_build_signature_for_dockerfile(dockerfile: str) -> str:
+        return {
+            "Dockerfile.alpine": "sig-alpine",
+            "Dockerfile.debian": "sig-debian",
+        }[dockerfile]
+
     monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
     )
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label",
+        fake_resolve_config_label,
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.build_signature_for_dockerfile",
+        fake_build_signature_for_dockerfile,
     )
 
     exit_code = main(
@@ -100,25 +123,33 @@ def test_main_writes_matrix_json_from_discovered_tags(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> 13-alpine, 14-alpine",
                 "target_tags": ["13-alpine", "14-alpine"],
             },
             {
                 "digest": "sha256:bbb",
                 "base_image": "docker.io/library/postgres@sha256:bbb",
+                "build_signature": "sig-debian",
                 "dockerfile": "Dockerfile.debian",
+                "job_name": "Dockerfile.debian -> 14-trixie",
                 "target_tags": ["14-trixie"],
             },
             {
                 "digest": "sha256:ccc",
                 "base_image": "docker.io/library/postgres@sha256:ccc",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> alpine",
                 "target_tags": ["alpine"],
             },
             {
                 "digest": "sha256:ddd",
                 "base_image": "docker.io/library/postgres@sha256:ddd",
+                "build_signature": "sig-debian",
                 "dockerfile": "Dockerfile.debian",
+                "job_name": "Dockerfile.debian -> trixie",
                 "target_tags": ["trixie"],
             }
         ]
@@ -164,12 +195,32 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
             ("lcdss/postgres-ulid", "alpine"): "sha256:stale-alpine",
         }.get((image, tag))
 
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        return {
+            ("lcdss/postgres-ulid", "16-alpine", "io.github.lcdss.postgres-ulid.build-signature"): "sig-alpine",
+            ("lcdss/postgres-ulid", "alpine", "io.github.lcdss.postgres-ulid.build-signature"): "sig-alpine",
+        }.get((image, tag, label))
+
+    def fake_build_signature_for_dockerfile(dockerfile: str) -> str:
+        return {
+            "Dockerfile.alpine": "sig-alpine",
+            "Dockerfile.debian": "sig-debian",
+        }[dockerfile]
+
     monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
     )
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label",
+        fake_resolve_config_label,
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.build_signature_for_dockerfile",
+        fake_build_signature_for_dockerfile,
     )
 
     exit_code = main(
@@ -187,31 +238,41 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> 13-alpine",
                 "target_tags": ["13-alpine"],
             },
             {
                 "digest": "sha256:bbb",
                 "base_image": "docker.io/library/postgres@sha256:bbb",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> 16-alpine",
                 "target_tags": ["16-alpine"],
             },
             {
                 "digest": "sha256:ccc",
                 "base_image": "docker.io/library/postgres@sha256:ccc",
+                "build_signature": "sig-debian",
                 "dockerfile": "Dockerfile.debian",
+                "job_name": "Dockerfile.debian -> 13-trixie",
                 "target_tags": ["13-trixie"],
             },
             {
                 "digest": "sha256:ddd",
                 "base_image": "docker.io/library/postgres@sha256:ddd",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> alpine",
                 "target_tags": ["alpine"],
             },
             {
                 "digest": "sha256:eee",
                 "base_image": "docker.io/library/postgres@sha256:eee",
+                "build_signature": "sig-debian",
                 "dockerfile": "Dockerfile.debian",
+                "job_name": "Dockerfile.debian -> trixie",
                 "target_tags": ["trixie"],
             },
         ]
@@ -253,12 +314,30 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
             ("lcdss/postgres-ulid", "alpine"): "sha256:ccc",
         }.get((image, tag))
 
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        return {
+            ("lcdss/postgres-ulid", "16-alpine", "io.github.lcdss.postgres-ulid.build-signature"): "sig-alpine",
+            ("lcdss/postgres-ulid", "alpine", "io.github.lcdss.postgres-ulid.build-signature"): "sig-alpine",
+        }.get((image, tag, label))
+
+    def fake_build_signature_for_dockerfile(dockerfile: str) -> str:
+        assert dockerfile == "Dockerfile.alpine"
+        return "sig-alpine"
+
     monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
     )
     monkeypatch.setattr(
         "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label",
+        fake_resolve_config_label,
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.build_signature_for_dockerfile",
+        fake_build_signature_for_dockerfile,
     )
 
     exit_code = main(
@@ -276,8 +355,91 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
+                "build_signature": "sig-alpine",
                 "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> 13-alpine",
                 "target_tags": ["13-alpine"],
+            }
+        ]
+    }
+
+
+def test_main_republishes_existing_tag_when_target_build_signature_drifted(
+    monkeypatch, tmp_path: Path
+) -> None:
+    policy_file = tmp_path / "mirror-policy.json"
+    output_file = tmp_path / "matrix.json"
+    policy_file.write_text(
+        '{"minimum_major": 13, "families": ["alpine"]}',
+        encoding="utf-8",
+    )
+
+    def fake_fetch_tags(namespace: str, repository: str) -> dict:
+        if (namespace, repository) == ("library", "postgres"):
+            return {
+                "results": [
+                    {"name": "16-alpine"},
+                ]
+            }
+
+        return {"results": [{"name": "16-alpine"}]}
+
+    def fake_resolve_manifest_digest(image: str, tag: str) -> str:
+        return {
+            ("library/postgres", "16-alpine"): "sha256:bbb",
+        }[(image, tag)]
+
+    def fake_resolve_source_digest(image: str, tag: str) -> str | None:
+        return {
+            ("lcdss/postgres-ulid", "16-alpine"): "sha256:bbb",
+        }.get((image, tag))
+
+    def fake_resolve_config_label(image: str, tag: str, label: str) -> str | None:
+        return {
+            ("lcdss/postgres-ulid", "16-alpine", "io.github.lcdss.postgres-ulid.build-signature"): "sig-stale",
+        }.get((image, tag, label))
+
+    def fake_build_signature_for_dockerfile(dockerfile: str) -> str:
+        assert dockerfile == "Dockerfile.alpine"
+        return "sig-current"
+
+    monkeypatch.setattr("scripts.mirror.cli.fetch_tags", fake_fetch_tags)
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_manifest_digest", fake_resolve_manifest_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_source_digest", fake_resolve_source_digest
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.resolve_config_label",
+        fake_resolve_config_label,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "scripts.mirror.cli.build_signature_for_dockerfile",
+        fake_build_signature_for_dockerfile,
+        raising=False,
+    )
+
+    exit_code = main(
+        [
+            "--policy",
+            str(policy_file),
+            "--output",
+            str(output_file),
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(output_file.read_text(encoding="utf-8")) == {
+        "include": [
+            {
+                "digest": "sha256:bbb",
+                "base_image": "docker.io/library/postgres@sha256:bbb",
+                "build_signature": "sig-current",
+                "dockerfile": "Dockerfile.alpine",
+                "job_name": "Dockerfile.alpine -> 16-alpine",
+                "target_tags": ["16-alpine"],
             }
         ]
     }

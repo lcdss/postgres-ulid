@@ -44,6 +44,8 @@ def build_publish_plan(
     destination_tag_payload: dict,
     digest_by_tag: dict[str, str],
     destination_source_digest_by_tag: dict[str, str],
+    build_signature_by_tag: dict[str, str],
+    destination_build_signature_by_tag: dict[str, str],
 ) -> list[dict[str, Any]]:
     upstream_names = [item["name"] for item in upstream_tag_payload["results"]]
     destination_names = {item["name"] for item in destination_tag_payload["results"]}
@@ -52,20 +54,23 @@ def build_publish_plan(
         for tag in selected_tags(upstream_names, policy.minimum_major, policy.families)
         if tag not in destination_names
         or destination_source_digest_by_tag.get(tag) != digest_by_tag[tag]
+        or destination_build_signature_by_tag.get(tag) != build_signature_by_tag[tag]
     ]
 
-    grouped: dict[tuple[str, str], list[str]] = {}
+    grouped: dict[tuple[str, str, str], list[str]] = {}
     for tag in wanted:
         digest = digest_by_tag[tag]
         dockerfile = dockerfile_for_tag(tag)
-        grouped.setdefault((digest, dockerfile), []).append(tag)
+        build_signature = build_signature_by_tag[tag]
+        grouped.setdefault((digest, dockerfile, build_signature), []).append(tag)
 
     plan = []
-    for (digest, dockerfile), tags in sorted(grouped.items()):
+    for (digest, dockerfile, build_signature), tags in sorted(grouped.items()):
         plan.append(
             {
                 "digest": digest,
                 "base_image": f"postgres@{digest}",
+                "build_signature": build_signature,
                 "dockerfile": dockerfile,
                 "source_tags": tags,
                 "target_tags": tags,

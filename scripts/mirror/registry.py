@@ -13,6 +13,7 @@ MANIFEST_ACCEPT = ", ".join(
     ]
 )
 SOURCE_DIGEST_LABEL = "io.github.lcdss.postgres-ulid.source-digest"
+BUILD_SIGNATURE_LABEL = "io.github.lcdss.postgres-ulid.build-signature"
 
 
 def fetch_registry_token(image: str) -> str:

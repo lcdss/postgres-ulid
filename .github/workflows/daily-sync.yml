@@ -42,6 +42,7 @@ jobs:
           PY
 
   publish:
+    name: Publish ${{ matrix.job_name }}
     needs: plan
     if: needs.plan.outputs.has_work == 'true'
     runs-on: ubuntu-latest
@@ -91,6 +92,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
             SOURCE_DIGEST=${{ matrix.digest }}
+            BUILD_SIGNATURE=${{ matrix.build_signature }}
           tags: postgres-ulid:verify
           load: true
           cache-from: type=gha,scope=${{ matrix.digest }}
@@ -107,6 +109,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
             SOURCE_DIGEST=${{ matrix.digest }}
+            BUILD_SIGNATURE=${{ matrix.build_signature }}
           tags: ${{ steps.tags.outputs.publish_tags }}
           push: true
           cache-from: type=gha,scope=${{ matrix.digest }}

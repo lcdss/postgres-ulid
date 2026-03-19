@@ -1,4 +1,5 @@
 ARG BASE_IMAGE
+ARG BUILD_SIGNATURE
 ARG SOURCE_DIGEST
 
 FROM ${BASE_IMAGE} AS builder
@@ -21,10 +22,12 @@ RUN sh /usr/local/bin/install-build-deps.sh && \
 FROM ${BASE_IMAGE}
 
 ARG BASE_IMAGE
+ARG BUILD_SIGNATURE
 ARG SOURCE_DIGEST
 
 LABEL org.opencontainers.image.base.name="${BASE_IMAGE}" \
-      io.github.lcdss.postgres-ulid.source-digest="${SOURCE_DIGEST}"
+      io.github.lcdss.postgres-ulid.source-digest="${SOURCE_DIGEST}" \
+      io.github.lcdss.postgres-ulid.build-signature="${BUILD_SIGNATURE}"
 
 COPY --from=builder /out/ /
 
