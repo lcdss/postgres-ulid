@@ -1,0 +1,30 @@
+ARG BASE_IMAGE
+ARG SOURCE_DIGEST
+
+FROM ${BASE_IMAGE} AS builder
+
+ARG PGX_ULID_REPO=https://github.com/pksunkara/pgx_ulid.git
+ARG PGX_ULID_REF=master
+
+ENV CARGO_HOME=/usr/local/cargo
+ENV PATH=/usr/local/cargo/bin:${PATH}
+
+COPY scripts/install-build-deps-alpine.sh /usr/local/bin/install-build-deps.sh
+COPY scripts/build-pgx-ulid.sh /usr/local/bin/build-pgx-ulid.sh
+COPY scripts/find-pg-config.sh /usr/local/bin/find-pg-config.sh
+COPY scripts/stage-extension-artifacts.sh /usr/local/bin/stage-extension-artifacts.sh
+
+RUN sh /usr/local/bin/install-build-deps.sh && \
+    sh /usr/local/bin/build-pgx-ulid.sh
+
+FROM ${BASE_IMAGE}
+
+ARG BASE_IMAGE
+ARG SOURCE_DIGEST
+
+LABEL org.opencontainers.image.base.name="${BASE_IMAGE}" \
+      io.github.lcdss.postgres-ulid.source-digest="${SOURCE_DIGEST}"
+
+COPY --from=builder /out/ /
+
+CMD ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]

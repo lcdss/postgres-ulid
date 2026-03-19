@@ -87,7 +87,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ./${{ matrix.dockerfile }}
           build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
             SOURCE_DIGEST=${{ matrix.digest }}
@@ -103,7 +103,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ./${{ matrix.dockerfile }}
           build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
             SOURCE_DIGEST=${{ matrix.digest }}

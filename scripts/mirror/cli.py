@@ -88,6 +88,7 @@ def build_matrix(
                 "base_image": (
                     f"docker.io/{source_namespace}/{source_repository}@{item['digest']}"
                 ),
+                "dockerfile": item["dockerfile"],
                 "target_tags": item["target_tags"],
             }
         )

@@ -73,8 +73,8 @@ without extra runtime flags.
 ## How This Repository Works
 
 This repository is mostly automation. It rebuilds selected upstream Postgres
-tags, installs `pgx_ulid`, verifies the result with a smoke test, and publishes
-the matching image tags to Docker Hub.
+tags, installs `pgx_ulid`, verifies the result with Alpine and Debian-family
+smoke builds, and publishes the matching image tags to Docker Hub.
 
 If you only want to use the image, the sections above are the important part.
 
@@ -91,3 +91,8 @@ Run the local smoke test with:
 ```bash
 bash tests/smoke/test_image.sh
 ```
+
+That smoke script builds both:
+
+- `Dockerfile.alpine` against `postgres:17-alpine`
+- `Dockerfile.debian` against `postgres:17-trixie`

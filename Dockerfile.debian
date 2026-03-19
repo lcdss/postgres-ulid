@@ -10,20 +10,13 @@ ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
 ENV PATH=/usr/local/cargo/bin:${PATH}
 
-COPY scripts/install-build-deps.sh /usr/local/bin/install-build-deps.sh
+COPY scripts/install-build-deps-debian.sh /usr/local/bin/install-build-deps.sh
+COPY scripts/build-pgx-ulid.sh /usr/local/bin/build-pgx-ulid.sh
 COPY scripts/find-pg-config.sh /usr/local/bin/find-pg-config.sh
 COPY scripts/stage-extension-artifacts.sh /usr/local/bin/stage-extension-artifacts.sh
 
-RUN set -eux; \
-    sh /usr/local/bin/install-build-deps.sh; \
-    pg_config_path="$(sh /usr/local/bin/find-pg-config.sh)"; \
-    export LIBCLANG_PATH="$(dirname "$(find /usr/lib -name 'libclang.so*' | head -n1)")"; \
-    cargo install cargo-pgrx --locked; \
-    git clone --depth 1 --branch "${PGX_ULID_REF}" "${PGX_ULID_REPO}" /tmp/pgx_ulid; \
-    cd /tmp/pgx_ulid; \
-    cargo pgrx init --pg"${PG_MAJOR}"="${pg_config_path}"; \
-    cargo pgrx install --release --pg-config "${pg_config_path}"; \
-    sh /usr/local/bin/stage-extension-artifacts.sh "${pg_config_path}" /out
+RUN sh /usr/local/bin/install-build-deps.sh && \
+    sh /usr/local/bin/build-pgx-ulid.sh
 
 FROM ${BASE_IMAGE}
 

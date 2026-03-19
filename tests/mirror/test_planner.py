@@ -78,24 +78,28 @@ def test_build_publish_plan_filters_major_families_and_groups_by_digest() -> Non
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "dockerfile": "Dockerfile.alpine",
             "source_tags": ["13-alpine", "14-alpine"],
             "target_tags": ["13-alpine", "14-alpine"],
         },
         {
             "digest": "sha256:ccc",
             "base_image": "postgres@sha256:ccc",
+            "dockerfile": "Dockerfile.debian",
             "source_tags": ["13-trixie", "14-trixie"],
             "target_tags": ["13-trixie", "14-trixie"],
         },
         {
             "digest": "sha256:ddd",
             "base_image": "postgres@sha256:ddd",
+            "dockerfile": "Dockerfile.alpine",
             "source_tags": ["alpine"],
             "target_tags": ["alpine"],
         },
         {
             "digest": "sha256:eee",
             "base_image": "postgres@sha256:eee",
+            "dockerfile": "Dockerfile.debian",
             "source_tags": ["trixie"],
             "target_tags": ["trixie"],
         }
@@ -135,18 +139,21 @@ def test_build_publish_plan_republishes_existing_tag_when_digest_changes() -> No
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "dockerfile": "Dockerfile.alpine",
             "source_tags": ["13-alpine", "14-alpine"],
             "target_tags": ["13-alpine", "14-alpine"],
         },
         {
             "digest": "sha256:bbb",
             "base_image": "postgres@sha256:bbb",
+            "dockerfile": "Dockerfile.alpine",
             "source_tags": ["16-alpine"],
             "target_tags": ["16-alpine"],
         },
         {
             "digest": "sha256:ccc",
             "base_image": "postgres@sha256:ccc",
+            "dockerfile": "Dockerfile.alpine",
             "source_tags": ["alpine"],
             "target_tags": ["alpine"],
         },
@@ -191,6 +198,7 @@ def test_build_publish_plan_skips_existing_tag_when_source_digest_matches() -> N
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "dockerfile": "Dockerfile.alpine",
             "source_tags": ["13-alpine"],
             "target_tags": ["13-alpine"],
         }

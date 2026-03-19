@@ -19,7 +19,7 @@ def write_fake_command(
     command.chmod(command.stat().st_mode | stat.S_IEXEC)
 
 
-def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
+def test_install_build_deps_debian_uses_apt_and_rustup(tmp_path: Path) -> None:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     log_file = tmp_path / "commands.log"
@@ -52,7 +52,7 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
     env["PG_MAJOR"] = "17"
 
     result = subprocess.run(
-        ["/usr/bin/bash", "scripts/install-build-deps.sh"],
+        ["/usr/bin/bash", "scripts/install-build-deps-debian.sh"],
         cwd=Path(__file__).resolve().parents[1],
         env=env,
         capture_output=True,
@@ -80,7 +80,7 @@ def test_install_build_deps_uses_apt_for_debian_images(tmp_path: Path) -> None:
     assert commands[4].startswith("rm -rf /var/lib/apt/lists/")
 
 
-def test_install_build_deps_uses_rustup_for_alpine_images(tmp_path: Path) -> None:
+def test_install_build_deps_alpine_uses_apk_and_packaged_rust(tmp_path: Path) -> None:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     log_file = tmp_path / "commands.log"
@@ -111,7 +111,7 @@ def test_install_build_deps_uses_rustup_for_alpine_images(tmp_path: Path) -> Non
     env["FAKE_COMMAND_LOG"] = str(log_file)
 
     result = subprocess.run(
-        ["/usr/bin/bash", "scripts/install-build-deps.sh"],
+        ["/usr/bin/bash", "scripts/install-build-deps-alpine.sh"],
         cwd=Path(__file__).resolve().parents[1],
         env=env,
         capture_output=True,

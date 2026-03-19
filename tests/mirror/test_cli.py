@@ -9,6 +9,7 @@ def test_matrix_payload_wraps_publish_plan_for_github_actions() -> None:
         {
             "digest": "sha256:aaa",
             "base_image": "postgres@sha256:aaa",
+            "dockerfile": "Dockerfile.alpine",
             "target_tags": ["17-alpine", "17.6-alpine3.22"],
         }
     ]
@@ -20,6 +21,7 @@ def test_matrix_payload_wraps_publish_plan_for_github_actions() -> None:
             {
                 "digest": "sha256:aaa",
                 "base_image": "postgres@sha256:aaa",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["17-alpine", "17.6-alpine3.22"],
             }
         ]
@@ -98,21 +100,25 @@ def test_main_writes_matrix_json_from_discovered_tags(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["13-alpine", "14-alpine"],
             },
             {
                 "digest": "sha256:bbb",
                 "base_image": "docker.io/library/postgres@sha256:bbb",
+                "dockerfile": "Dockerfile.debian",
                 "target_tags": ["14-trixie"],
             },
             {
                 "digest": "sha256:ccc",
                 "base_image": "docker.io/library/postgres@sha256:ccc",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["alpine"],
             },
             {
                 "digest": "sha256:ddd",
                 "base_image": "docker.io/library/postgres@sha256:ddd",
+                "dockerfile": "Dockerfile.debian",
                 "target_tags": ["trixie"],
             }
         ]
@@ -181,26 +187,31 @@ def test_main_republishes_existing_tag_when_target_source_digest_drifted(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["13-alpine"],
             },
             {
                 "digest": "sha256:bbb",
                 "base_image": "docker.io/library/postgres@sha256:bbb",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["16-alpine"],
             },
             {
                 "digest": "sha256:ccc",
                 "base_image": "docker.io/library/postgres@sha256:ccc",
+                "dockerfile": "Dockerfile.debian",
                 "target_tags": ["13-trixie"],
             },
             {
                 "digest": "sha256:ddd",
                 "base_image": "docker.io/library/postgres@sha256:ddd",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["alpine"],
             },
             {
                 "digest": "sha256:eee",
                 "base_image": "docker.io/library/postgres@sha256:eee",
+                "dockerfile": "Dockerfile.debian",
                 "target_tags": ["trixie"],
             },
         ]
@@ -265,6 +276,7 @@ def test_main_skips_existing_tag_when_target_source_digest_matches(
             {
                 "digest": "sha256:aaa",
                 "base_image": "docker.io/library/postgres@sha256:aaa",
+                "dockerfile": "Dockerfile.alpine",
                 "target_tags": ["13-alpine"],
             }
         ]

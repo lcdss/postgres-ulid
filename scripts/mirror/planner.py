@@ -27,6 +27,17 @@ def selected_tags(
     return sorted(selected)
 
 
+def dockerfile_for_tag(tag: str) -> str:
+    if tag == "alpine":
+        return "Dockerfile.alpine"
+
+    match = MAJOR_FAMILY_TAG.fullmatch(tag)
+    if match is not None and match.group("family") == "alpine":
+        return "Dockerfile.alpine"
+
+    return "Dockerfile.debian"
+
+
 def build_publish_plan(
     policy: Any,
     upstream_tag_payload: dict,
@@ -43,17 +54,19 @@ def build_publish_plan(
         or destination_source_digest_by_tag.get(tag) != digest_by_tag[tag]
     ]
 
-    grouped: dict[str, list[str]] = {}
+    grouped: dict[tuple[str, str], list[str]] = {}
     for tag in wanted:
         digest = digest_by_tag[tag]
-        grouped.setdefault(digest, []).append(tag)
+        dockerfile = dockerfile_for_tag(tag)
+        grouped.setdefault((digest, dockerfile), []).append(tag)
 
     plan = []
-    for digest, tags in sorted(grouped.items()):
+    for (digest, dockerfile), tags in sorted(grouped.items()):
         plan.append(
             {
                 "digest": digest,
                 "base_image": f"postgres@{digest}",
+                "dockerfile": dockerfile,
                 "source_tags": tags,
                 "target_tags": tags,
             }
