@@ -52,23 +52,41 @@ docker exec -it postgres-ulid psql -U postgres -d postgres
 ```
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS pgx_ulid;
 SELECT gen_ulid();
-SELECT gen_monotonic_ulid();
 ```
 
-`CREATE EXTENSION` is still required per database. The image includes the
-extension files, but Postgres does not enable extensions automatically.
-This image also starts PostgreSQL with `shared_preload_libraries=pgx_ulid`, so
-monotonic ULID generation works out of the box.
+On a fresh data directory, the image enables `pgx_ulid` automatically in the
+default `postgres` database and in `template1`, so new databases inherit it as
+well.
+
+If you also want monotonic ULIDs, start PostgreSQL with an explicit preload
+flag:
+
+```bash
+docker run -d \
+  --name postgres-ulid-monotonic \
+  -e POSTGRES_PASSWORD=postgres \
+  lcdss/postgres-ulid:17-alpine \
+  postgres -c shared_preload_libraries=pgx_ulid
+```
+
+Then:
+
+```sql
+SELECT gen_monotonic_ulid();
+```
 
 ## What This Image Changes
 
 This image keeps the behavior of the official Postgres image and adds the
-`pgx_ulid` extension files during the build. That means you still configure and
-run PostgreSQL the usual way, but `pgx_ulid` is available to install with SQL.
-It also preloads `pgx_ulid` by default so `gen_monotonic_ulid()` is available
-without extra runtime flags.
+`pgx_ulid` extension files during the build. On first initialization it also
+enables the extension in `postgres` and `template1`, so the default database
+and newly created databases have the native `ulid` type and can use
+`gen_ulid()` immediately.
+
+The image does not preload `pgx_ulid` by default. If you want
+`gen_monotonic_ulid()`, pass `postgres -c shared_preload_libraries=pgx_ulid`
+when starting the container.
 
 ## How This Repository Works
 

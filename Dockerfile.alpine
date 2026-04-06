@@ -29,5 +29,4 @@ LABEL org.opencontainers.image.base.name="${BASE_IMAGE}" \
       io.github.lcdss.postgres-ulid.build-signature="${BUILD_SIGNATURE}"
 
 COPY --from=builder /out/ /
-
-CMD ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
+COPY scripts/init-enable-pgx-ulid.sh /docker-entrypoint-initdb.d/10-enable-pgx-ulid.sh

@@ -16,16 +16,21 @@ shift
 
 case "$command" in
   run)
+    mode=default
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --name)
           shift
           container=$1
           ;;
+        postgres)
+          mode=preload
+          ;;
       esac
       shift
     done
     printf '%s\\n' "$container" >"$state_dir/container-name"
+    printf '%s\\n' "$mode" >"$state_dir/run-mode"
     : >"$state_dir/running"
     echo "fake-container-id"
     ;;
@@ -38,6 +43,9 @@ case "$command" in
     fi
     ;;
   exec)
+    if [ "$1" = "-i" ]; then
+      shift
+    fi
     container=$1
     shift
     tool=$1
@@ -48,8 +56,17 @@ case "$command" in
         exit 0
         ;;
       psql)
-        printf '%s\n' "$*" >"$state_dir/psql-args"
-        count_file="$state_dir/psql-count"
+        mode=$(cat "$state_dir/run-mode")
+        script=$(cat)
+        if [ "$mode" = "default" ]; then
+          printf '%s\n' "$*" >"$state_dir/default-psql-args"
+          printf '%s\n' "$script" >"$state_dir/default-psql-script"
+          count_file="$state_dir/default-psql-count"
+        else
+          printf '%s\n' "$*" >"$state_dir/preload-psql-args"
+          printf '%s\n' "$script" >"$state_dir/preload-psql-script"
+          count_file="$state_dir/preload-psql-count"
+        fi
         count=0
         if [ -f "$count_file" ]; then
           count=$(cat "$count_file")
@@ -74,7 +91,7 @@ esac
     docker.chmod(docker.stat().st_mode | stat.S_IEXEC)
 
 
-def test_verify_image_retries_sql_until_postgres_is_stable(tmp_path: Path) -> None:
+def test_verify_image_checks_default_and_optional_preload_modes(tmp_path: Path) -> None:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     write_fake_docker(bin_dir)
@@ -92,8 +109,23 @@ def test_verify_image_retries_sql_until_postgres_is_stable(tmp_path: Path) -> No
     )
 
     assert result.returncode == 0, result.stderr
-    assert (tmp_path / "psql-count").read_text(encoding="utf-8").strip() == "2"
     assert (
-        "SELECT gen_monotonic_ulid();"
-        in (tmp_path / "psql-args").read_text(encoding="utf-8")
-    )
+        tmp_path / "default-psql-count"
+    ).read_text(encoding="utf-8").strip() == "2"
+    assert (
+        tmp_path / "preload-psql-count"
+    ).read_text(encoding="utf-8").strip() == "2"
+
+    default_args = (tmp_path / "default-psql-args").read_text(encoding="utf-8")
+    preload_args = (tmp_path / "preload-psql-args").read_text(encoding="utf-8")
+    default_script = (tmp_path / "default-psql-script").read_text(encoding="utf-8")
+    preload_script = (tmp_path / "preload-psql-script").read_text(encoding="utf-8")
+
+    assert "CREATE EXTENSION" not in default_script
+    assert "gen_ulid();" in default_script
+    assert "CREATE DATABASE verify_template1 TEMPLATE template1" in default_script
+    assert "SELECT extname FROM pg_extension WHERE extname = 'pgx_ulid';" in default_script
+    assert "-d postgres" in default_args
+
+    assert "gen_monotonic_ulid();" in preload_script
+    assert "-d postgres" in preload_args
